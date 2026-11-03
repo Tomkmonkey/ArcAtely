@@ -1,0 +1,8 @@
+import { notFound } from 'next/navigation';
+import { prisma } from '@/lib/prisma';
+import { MODEL_SELECT } from '@/lib/utils';
+import { ModelCard } from '@/components/model-card';
+import { Empty } from '@/components/ui/empty';
+import { SubscribeButton } from '@/components/subscribe-button';
+export const dynamic = 'force-dynamic';
+export default async function TagPage({ params }: { params: { slug: string } }) { const tag = await prisma.tag.findUnique({ where: { slug: params.slug } }); if (!tag) notFound(); const [models, related] = await Promise.all([prisma.model.findMany({ where: { status: 'APPROVED', visibility: 'PUBLIC', tags: { some: { tagId: tag.id } } }, select: MODEL_SELECT, orderBy: { hotScore: 'desc' } }), prisma.tag.findMany({ where: { id: { not: tag.id }, models: { some: { model: { tags: { some: { tagId: tag.id } } } } } }, take: 8 })]); return <div className="container-site py-12"><div className="flex flex-col justify-between gap-5 sm:flex-row sm:items-end"><div><div className="eyebrow">TAG COLLECTION</div><h1 className="section-title">#{tag.name}</h1><p className="mt-3 text-muted-foreground">{tag.description || `共 ${models.length} 个相关模型`}</p></div><SubscribeButton type="TAG" targetId={tag.id} label={tag.name} /></div><div className="mt-8 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">{models.map((model) => <ModelCard key={model.id} model={model} />)}</div>{!models.length && <div className="mt-8"><Empty /></div>}{related.length > 0 && <div className="mt-10"><h2 className="mb-3 text-sm font-bold">相关标签</h2><div className="flex flex-wrap gap-2">{related.map((item) => <a key={item.id} href={`/tags/${item.slug}`} className="rounded-full border bg-card px-3 py-1.5 text-sm">#{item.name}</a>)}</div></div>}</div>; }

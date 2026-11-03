@@ -1,0 +1,2 @@
+import Link from 'next/link';
+export default function NotFound() { return <div className="container-site flex min-h-[60vh] flex-col items-center justify-center text-center"><span className="font-serif text-7xl font-black text-primary/30">404</span><h1 className="mt-4 font-serif text-2xl font-bold">没有找到这个页面</h1><p className="mt-2 text-muted-foreground">它可能被移动、下架，或从未存在。</p><Link href="/" className="mt-6 rounded-lg bg-primary px-5 py-3 text-sm font-bold text-white">回到首页</Link></div>; }

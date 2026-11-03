@@ -1,0 +1,7 @@
+import { z } from 'zod';
+import { prisma } from '@/lib/prisma';
+import { requireUser, ok, handleError } from '@/lib/api';
+import { audit } from '@/lib/audit';
+const schema = z.object({ siteName: z.string().min(2).max(50), logo: z.string().max(2000).optional(), announcement: z.string().max(1000), navigation: z.array(z.object({ label: z.string().trim().min(1).max(20), href: z.string().regex(/^\/(?!\/)/, '导航仅允许站内路径').max(200) })).max(10).optional(), registrationEnabled: z.boolean(), credentialsEnabled: z.boolean(), maxImageMb: z.number().min(1).max(20), maxModelMb: z.number().min(1).max(2048), tagMinLength: z.number().min(1).max(10), tagMaxLength: z.number().min(2).max(30), moderationEnabled: z.boolean(), messagesEnabled: z.boolean(), reportReasons: z.array(z.string().min(2).max(100)).min(1).max(20) });
+export async function GET() { const { error } = await requireUser(['SUPER_ADMIN']); if (error) return error; return ok(await prisma.setting.findMany()); }
+export async function PUT(request: Request) { const { session, error } = await requireUser(['SUPER_ADMIN']); if (error) return error; try { const input = schema.parse(await request.json()); const setting = await prisma.setting.upsert({ where: { key: 'site' }, create: { key: 'site', value: input }, update: { value: input } }); await audit({ actorId: session!.user.id, action: 'SETTINGS_UPDATE', targetType: 'SETTING', targetId: 'site' }); return ok(setting); } catch (e) { return handleError(e); } }

@@ -1,0 +1,392 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  USER
+  AUTHOR
+  MODERATOR
+  ADMIN
+  SUPER_ADMIN
+}
+
+enum UserStatus {
+  ACTIVE
+  MUTED
+  BANNED
+}
+
+enum ModelStatus {
+  DRAFT
+  PENDING
+  APPROVED
+  REJECTED
+  REMOVED
+}
+
+enum Visibility {
+  PUBLIC
+  UNLISTED
+  PRIVATE
+}
+
+enum ReportStatus {
+  PENDING
+  RESOLVED
+  REJECTED
+  APPEALING
+}
+
+enum ModerationAction {
+  SUBMIT
+  APPROVE
+  REJECT
+  REMOVE
+  RESTORE
+  RESOLVE_REPORT
+  DISMISS_REPORT
+}
+
+enum SubscriptionType {
+  AUTHOR
+  TAG
+  COLLECTION
+}
+
+enum NotificationType {
+  SYSTEM
+  MODERATION
+  FOLLOW
+  LIKE
+  FAVORITE
+  MESSAGE
+  SUBSCRIPTION
+  REPORT
+}
+
+model User {
+  id            String     @id @default(cuid())
+  email         String     @unique
+  name          String     @unique
+  passwordHash  String
+  image         String?
+  bio           String?    @db.Text
+  role          Role       @default(USER)
+  status        UserStatus @default(ACTIVE)
+  verified      Boolean    @default(false)
+  lastLoginAt   DateTime?
+  createdAt     DateTime   @default(now())
+  updatedAt     DateTime   @updatedAt
+  models        Model[]
+  likes         Like[]
+  favorites     Favorite[]
+  histories     ViewHistory[]
+  comments      Comment[]
+  following     Follow[]       @relation("follower")
+  followers     Follow[]       @relation("following")
+  subscriptions Subscription[]
+  participants  ConversationParticipant[]
+  messages      Message[]
+  reports       Report[]       @relation("reporter")
+  moderations   ModerationRecord[] @relation("reviewer")
+  notifications Notification[]
+  searches      SearchHistory[]
+  audits        AuditLog[]
+  collections   Collection[]
+  backups       BackupRecord[]
+  @@index([createdAt])
+  @@index([role, status])
+}
+
+model Category {
+  id          String  @id @default(cuid())
+  name        String  @unique
+  slug        String  @unique
+  description String?
+  sortOrder   Int     @default(0)
+  enabled     Boolean @default(true)
+  models      Model[]
+}
+
+model Model {
+  id          String      @id @default(cuid())
+  title       String
+  slug        String      @unique
+  description String      @db.Text
+  coverUrl    String?
+  images      Json        @default("[]")
+  fileUrl     String?
+  externalUrl String?
+  fileName    String?
+  fileSize    Int?
+  format      String?
+  version     String      @default("1.0")
+  status      ModelStatus @default(PENDING)
+  visibility  Visibility  @default(PUBLIC)
+  featured    Boolean     @default(false)
+  pinned      Boolean     @default(false)
+  views       Int         @default(0)
+  likesCount  Int         @default(0)
+  favoritesCount Int      @default(0)
+  hotScore    Float       @default(0)
+  rejectionReason String? @db.Text
+  publishedAt DateTime?
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+  authorId    String
+  author      User        @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  categoryId  String?
+  category    Category?   @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  tags        ModelTag[]
+  likes       Like[]
+  favorites   Favorite[]
+  histories   ViewHistory[]
+  comments    Comment[]
+  collections CollectionModel[]
+  @@index([status, visibility, publishedAt])
+  @@index([authorId, status])
+  @@index([categoryId])
+  @@index([hotScore])
+  @@index([views, likesCount, favoritesCount])
+}
+
+model Tag {
+  id          String   @id @default(cuid())
+  name        String   @unique
+  slug        String   @unique
+  description String?
+  color       String   @default("#796854")
+  isBuiltin   Boolean  @default(false)
+  approved    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  models      ModelTag[]
+  @@index([approved])
+}
+
+model ModelTag {
+  modelId String
+  tagId   String
+  model   Model @relation(fields: [modelId], references: [id], onDelete: Cascade)
+  tag     Tag   @relation(fields: [tagId], references: [id], onDelete: Cascade)
+  @@id([modelId, tagId])
+  @@index([tagId])
+}
+
+model Like {
+  userId    String
+  modelId   String
+  createdAt DateTime @default(now())
+  user      User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  model     Model @relation(fields: [modelId], references: [id], onDelete: Cascade)
+  @@id([userId, modelId])
+  @@index([modelId, createdAt])
+}
+
+model Favorite {
+  userId    String
+  modelId   String
+  createdAt DateTime @default(now())
+  user      User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  model     Model @relation(fields: [modelId], references: [id], onDelete: Cascade)
+  @@id([userId, modelId])
+  @@index([modelId, createdAt])
+}
+
+model ViewHistory {
+  id        String   @id @default(cuid())
+  userId    String
+  modelId   String
+  viewedAt  DateTime @default(now())
+  user      User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  model     Model @relation(fields: [modelId], references: [id], onDelete: Cascade)
+  @@unique([userId, modelId])
+  @@index([userId, viewedAt])
+}
+
+model Follow {
+  followerId  String
+  followingId String
+  createdAt   DateTime @default(now())
+  follower    User @relation("follower", fields: [followerId], references: [id], onDelete: Cascade)
+  following   User @relation("following", fields: [followingId], references: [id], onDelete: Cascade)
+  @@id([followerId, followingId])
+  @@index([followingId])
+}
+
+model Subscription {
+  id        String           @id @default(cuid())
+  userId    String
+  type      SubscriptionType
+  targetId  String
+  notify    Boolean          @default(true)
+  createdAt DateTime         @default(now())
+  user      User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  @@unique([userId, type, targetId])
+  @@index([type, targetId])
+}
+
+model Collection {
+  id          String   @id @default(cuid())
+  title       String
+  slug        String   @unique
+  description String?  @db.Text
+  coverUrl    String?
+  featured    Boolean  @default(false)
+  ownerId     String?
+  owner       User?    @relation(fields: [ownerId], references: [id], onDelete: SetNull)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  models      CollectionModel[]
+}
+
+model CollectionModel {
+  collectionId String
+  modelId      String
+  sortOrder    Int    @default(0)
+  collection   Collection @relation(fields: [collectionId], references: [id], onDelete: Cascade)
+  model        Model      @relation(fields: [modelId], references: [id], onDelete: Cascade)
+  @@id([collectionId, modelId])
+}
+
+model Conversation {
+  id           String   @id @default(cuid())
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  participants ConversationParticipant[]
+  messages     Message[]
+}
+
+model ConversationParticipant {
+  conversationId String
+  userId         String
+  lastReadAt     DateTime?
+  blocked        Boolean   @default(false)
+  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  @@id([conversationId, userId])
+  @@index([userId])
+}
+
+model Message {
+  id             String   @id @default(cuid())
+  conversationId String
+  senderId       String
+  content        String   @db.Text
+  readAt         DateTime?
+  deletedAt      DateTime?
+  createdAt      DateTime @default(now())
+  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  sender         User         @relation(fields: [senderId], references: [id], onDelete: Cascade)
+  @@index([conversationId, createdAt])
+}
+
+model Comment {
+  id        String    @id @default(cuid())
+  content   String    @db.Text
+  modelId   String
+  authorId  String
+  parentId  String?
+  removed   Boolean   @default(false)
+  createdAt DateTime  @default(now())
+  model     Model     @relation(fields: [modelId], references: [id], onDelete: Cascade)
+  author    User      @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  @@index([modelId, createdAt])
+}
+
+model Report {
+  id          String       @id @default(cuid())
+  reporterId  String
+  targetType  String
+  targetId    String
+  reason      String
+  details     String?      @db.Text
+  status      ReportStatus @default(PENDING)
+  resolution  String?      @db.Text
+  appeal      String?      @db.Text
+  handledBy   String?
+  handledAt   DateTime?
+  createdAt   DateTime     @default(now())
+  reporter    User         @relation("reporter", fields: [reporterId], references: [id], onDelete: Cascade)
+  @@index([status, createdAt])
+  @@index([targetType, targetId])
+}
+
+model ModerationRecord {
+  id         String           @id @default(cuid())
+  targetType String
+  targetId   String
+  action     ModerationAction
+  reason     String?          @db.Text
+  snapshot   Json?
+  reviewerId String?
+  createdAt  DateTime         @default(now())
+  reviewer   User?            @relation("reviewer", fields: [reviewerId], references: [id], onDelete: SetNull)
+  @@index([targetType, targetId, createdAt])
+  @@index([reviewerId, createdAt])
+}
+
+model Notification {
+  id        String           @id @default(cuid())
+  userId    String
+  type      NotificationType
+  title     String
+  content   String?          @db.Text
+  link      String?
+  readAt    DateTime?
+  createdAt DateTime         @default(now())
+  user      User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  @@index([userId, readAt, createdAt])
+}
+
+model SearchHistory {
+  id        String   @id @default(cuid())
+  userId    String
+  query     String
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  @@index([userId, createdAt])
+}
+
+model SensitiveWord {
+  id        String   @id @default(cuid())
+  word      String   @unique
+  severity  Int      @default(1)
+  enabled   Boolean  @default(true)
+  createdAt DateTime @default(now())
+}
+
+model Setting {
+  key       String   @id
+  value     Json
+  updatedAt DateTime @updatedAt
+}
+
+model AuditLog {
+  id         String   @id @default(cuid())
+  actorId    String?
+  action     String
+  targetType String
+  targetId   String?
+  metadata   Json?
+  ip         String?
+  createdAt  DateTime @default(now())
+  actor      User?    @relation(fields: [actorId], references: [id], onDelete: SetNull)
+  @@index([actorId, createdAt])
+  @@index([targetType, targetId])
+}
+
+model BackupRecord {
+  id         String   @id @default(cuid())
+  filename   String
+  size       BigInt   @default(0)
+  status     String   @default("RUNNING")
+  note       String?
+  createdBy  String?
+  createdAt  DateTime @default(now())
+  creator    User?    @relation(fields: [createdBy], references: [id], onDelete: SetNull)
+}

@@ -1,0 +1,10 @@
+'use client';
+import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+import { useState } from 'react';
+import { Pencil, Trash2 } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { formatDate } from '@/lib/utils';
+const labels: Record<string, string> = { PENDING: '审核中', APPROVED: '已发布', REJECTED: '已驳回', REMOVED: '已下架', DRAFT: '草稿' };
+export function MyModelList({ models }: { models: { id: string; title: string; status: string; updatedAt: Date | string; views: number; rejectionReason: string | null }[] }) { const [loading, setLoading] = useState(''); const router = useRouter(); async function remove(id: string, title: string) { if (!window.confirm(`确定下架「${title}」吗？下架后不再公开展示。`)) return; setLoading(id); const response = await fetch(`/api/models/${id}`, { method: 'DELETE' }); if (response.ok) router.refresh(); setLoading(''); } return <div className="space-y-3">{models.map((model) => <article key={model.id} className="surface p-4"><div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-center"><div><div className="flex flex-wrap items-center gap-2"><Link href={`/models/${model.id}`} className="font-bold hover:text-primary">{model.title}</Link><Badge variant={model.status === 'APPROVED' ? 'success' : model.status === 'REJECTED' ? 'destructive' : 'warning'}>{labels[model.status]}</Badge></div><p className="mt-1 text-xs text-muted-foreground">更新于 {formatDate(model.updatedAt)} · {model.views} 次浏览</p>{model.rejectionReason && <p className="mt-2 text-xs text-red-600">驳回原因：{model.rejectionReason}</p>}</div><div className="flex gap-2"><Link href={`/models/${model.id}/edit`} className="inline-flex items-center gap-1 rounded-lg border px-3 py-2 text-xs font-semibold"><Pencil className="h-3.5 w-3.5" />编辑</Link><Button variant="ghost" size="sm" onClick={() => remove(model.id, model.title)} disabled={loading === model.id}><Trash2 className="h-4 w-4" />下架</Button></div></div></article>)}</div>; }

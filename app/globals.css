@@ -1,0 +1,35 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 43 33% 97%; --foreground: 30 12% 13%;
+    --card: 42 40% 99%; --card-foreground: 30 12% 13%;
+    --primary: 20 72% 45%; --primary-foreground: 40 40% 98%;
+    --secondary: 40 22% 91%; --secondary-foreground: 30 14% 22%;
+    --muted: 40 18% 93%; --muted-foreground: 30 8% 44%;
+    --accent: 77 17% 89%; --accent-foreground: 77 25% 25%;
+    --destructive: 0 65% 46%; --destructive-foreground: 0 0% 100%;
+    --border: 36 19% 85%; --input: 36 19% 82%; --ring: 20 72% 45%; --radius: 0.85rem;
+  }
+  * { @apply border-border; }
+  html { scroll-behavior: smooth; }
+  body { @apply bg-background text-foreground antialiased; background-image: radial-gradient(rgba(91,76,56,.035) 1px, transparent 1px); background-size: 20px 20px; }
+  ::selection { background: #e8c5ae; color: #38231a; }
+  :focus-visible { @apply outline-none ring-2 ring-ring ring-offset-2 ring-offset-background; }
+}
+@layer components {
+  .container-site { @apply mx-auto w-full max-w-[1280px] px-4 sm:px-6 lg:px-8; }
+  .section-title { @apply font-serif text-2xl font-bold tracking-tight sm:text-3xl; }
+  .eyebrow { @apply mb-2 text-xs font-bold uppercase tracking-[0.22em] text-primary; }
+  .surface { @apply rounded-2xl border bg-card shadow-soft; }
+  .prose-content { @apply whitespace-pre-wrap break-words leading-8 text-foreground/85; }
+  .admin-th { @apply px-4 py-3 text-left text-xs font-semibold text-muted-foreground; }
+  .admin-td { @apply px-4 py-3 text-sm; }
+}
+.line-clamp-2 { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.line-clamp-3 { display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+.no-scrollbar::-webkit-scrollbar { display: none; }
+.no-scrollbar { scrollbar-width: none; }
+@media (prefers-reduced-motion: reduce) { *, *::before, *::after { scroll-behavior: auto !important; animation-duration: .01ms !important; transition-duration: .01ms !important; } }
