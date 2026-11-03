@@ -79,7 +79,7 @@ npm run backup       # 手动数据库备份，需要 pg_dump
 
 未配置 Meilisearch 时 API 明确返回 `engine: database`；不是静默伪装搜索服务。本地降级不适合多实例生产。
 
-## Vercel 部署（详细）
+## Vercel 部署
 
 Vercel 是无状态 Serverless 环境，与 Docker 部署有三点关键差异：
 
